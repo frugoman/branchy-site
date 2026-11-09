@@ -2,7 +2,7 @@
 
 ## Audit score (`seo-audit.mjs`)
 - Baseline 2026-11-09 (live): **9/21**
-- After (local server of this branch): **18/21**. Remaining fails are N/A for a macOS-only, English-only site: hreflang, apple-itunes-app, App Store link.
+- After (local server): **18/21**. Live after deploy 2026-11-09: **18/21**. Remaining fails are N/A for a macOS-only, English-only site: hreflang, apple-itunes-app, App Store link.
 
 ## Done
 canonical, twitter:card, og:type/url, JSON-LD SoftwareApplication (macOS, free, DMG download), robots.txt + sitemap.xml, 404.html, `/guides/` with two guides (Article + FAQPage JSON-LD), Guides link in nav and footer.
