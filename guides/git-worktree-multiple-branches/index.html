@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0e1320"><link rel="icon" href="/icon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800;900&family=Overpass+Mono:wght@400&display=swap" rel="stylesheet"><link rel="stylesheet" href="/guides/guide.css">
+<title>Work on multiple branches at once with git worktree</title>
+<meta name="description" content="Use git worktree to keep several branches checked out in separate folders: no stashing, no half-committed WIP. Commands, rules and a hotfix workflow.">
+<link rel="canonical" href="https://branchy.frusoft.dev/guides/git-worktree-multiple-branches/">
+<meta property="og:title" content="Work on multiple branches at once with git worktree"><meta property="og:description" content="No stashing, no WIP commits: one folder per branch."><meta property="og:type" content="article"><meta property="og:url" content="https://branchy.frusoft.dev/guides/git-worktree-multiple-branches/"><meta property="og:image" content="https://branchy.frusoft.dev/icon.png"><meta name="twitter:card" content="summary">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Work on multiple branches at once with git worktree (no stashing)","author":{"@type":"Organization","name":"Frusoft"},"publisher":{"@type":"Organization","name":"Frusoft","url":"https://frusoft.dev"},"mainEntityOfPage":"https://branchy.frusoft.dev/guides/git-worktree-multiple-branches/","datePublished":"2026-11-09"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Why can't I check out the same branch in two worktrees?","acceptedAnswer":{"@type":"Answer","text":"Git refuses because two working copies moving the same branch pointer would silently overwrite each other's commits. Create a new branch from it, or use git worktree add --detach for a read-only look."}},
+{"@type":"Question","name":"Do worktrees share the same git history?","acceptedAnswer":{"@type":"Answer","text":"Yes. All worktrees share one .git object database, refs and config, so a commit made in one is instantly visible to the others. Only the working files, index and HEAD are separate."}},
+{"@type":"Question","name":"How do I delete a worktree?","acceptedAnswer":{"@type":"Answer","text":"Run git worktree remove <path>. If you deleted the folder by hand, run git worktree prune to clean up the stale record."}}]}</script>
+</head><body><header><a class="brand" href="/">Branchy</a><a href="/guides/">Guides</a><a href="/#install">Install</a></header><main>
+<p class="meta" style="margin-top:40px">Guide · Updated November 2026</p>
+<h1>Work on multiple branches at once with git worktree (no stashing)</h1>
+<p class="lede">You're deep in a feature, and a hotfix lands. The usual dance is <code>git stash</code>, switch, fix, switch back, <code>git stash pop</code>, and hope nothing conflicts. A worktree skips all of it: the other branch simply lives in another folder.</p>
+
+<h2>What a worktree is</h2>
+<p>A repository has one <code>.git</code> directory (history, branches, config) and, normally, one working folder. <code>git worktree add</code> creates additional working folders that all share that same <code>.git</code>. Each has its own checked-out branch, its own index and its own uncommitted changes. Commits made in one are immediately visible in the others, because there is only one object database.</p>
+
+<h2>The commands you need</h2>
+<pre><code># new branch in a sibling folder, based on main
+git worktree add -b hotfix/login ../myapp-hotfix main
+
+# an existing branch
+git worktree add ../myapp-review feature/search
+
+# a remote branch you want to review (creates a local tracking branch)
+git fetch origin
+git worktree add ../myapp-pr-482 -b pr-482 origin/feature/payments
+
+# see them all
+git worktree list
+
+# done: remove the folder and its record
+git worktree remove ../myapp-hotfix</code></pre>
+<p>Put worktrees <em>next to</em> your repo, not inside it, or your editor and file watchers will index them twice. A naming pattern like <code>&lt;repo&gt;-&lt;purpose&gt;</code> keeps <code>ls ..</code> readable.</p>
+
+<h2>The one rule that bites: a branch can be checked out once</h2>
+<p>Try to check out a branch that another worktree already has and git stops you:</p>
+<pre><code>fatal: 'feature/search' is already used by worktree at '/code/myapp-review'</code></pre>
+<p>That's deliberate: two working copies moving one branch pointer would overwrite each other's commits. Your options: go to the worktree that has it, make a new branch from it, or use <code>git worktree add --detach &lt;path&gt; &lt;commit&gt;</code> when you only want to look or build. The same lock applies to the main checkout, so a branch checked out in your original folder can't be added elsewhere either.</p>
+
+<h2>A workflow that actually works</h2>
+<ol>
+<li><b>Keep the main folder on a stable branch</b> (often <code>main</code>) and treat it as your "home" for pulling and cloning fresh state.</li>
+<li><b>One worktree per task</b>, created when you start it, removed when it merges. Short-lived worktrees don't pile up.</li>
+<li><b>Hotfix:</b> <code>git worktree add -b hotfix/x ../app-hotfix origin/main</code>, fix, push, open the PR, remove the folder. Your feature work never moved.</li>
+<li><b>Reviewing a PR:</b> add a worktree for its branch, run the tests there, and leave your own work untouched. This beats stash-and-switch because your dev server and build caches in the other folder keep running.</li>
+</ol>
+
+<h2>What doesn't come along</h2>
+<ul>
+<li><b>Ignored files.</b> <code>node_modules</code>, <code>.env</code>, build output and local config exist only where they were created. Each new worktree needs its own install and copies of local config. See the <a href="/guides/git-worktree-ai-coding-agents/">gotchas guide</a> for tactics.</li>
+<li><b>Disk.</b> Source files are duplicated per worktree (history is not). For big monorepos with heavy dependencies this adds up: remove worktrees you finished with.</li>
+<li><b>Submodules.</b> Support in linked worktrees has historically been rough. Test your repo before relying on it.</li>
+</ul>
+
+<h2>Cleaning up</h2>
+<pre><code>git worktree remove ../app-hotfix        # refuses if there are uncommitted changes
+git worktree remove --force ../app-hotfix # discards them
+git worktree prune                        # drop records for folders you deleted by hand
+git branch -d hotfix/x                    # the branch itself is separate</code></pre>
+<p>Removing a worktree doesn't delete its branch, and deleting a branch doesn't remove its worktree. Do both.</p>
+
+<div class="cta"><p><b>Seeing all of this at once.</b> The hard part of worktrees is remembering which folder holds what. Branchy is a free macOS git client that puts every worktree of a repo on one line in the sidebar, with uncommitted changes and ahead/behind counts, and switches between them in a click.</p><a class="btn" href="/#install">Get Branchy for Mac</a></div>
+
+<h2>FAQ</h2>
+<details><summary>Why can't I check out the same branch in two worktrees?</summary><p>Git refuses because two working copies moving the same branch pointer would silently overwrite each other's commits. Create a new branch from it, or use <code>--detach</code> for a read-only look.</p></details>
+<details><summary>Do worktrees share the same git history?</summary><p>Yes. One object database, refs and config are shared, so a commit in one worktree is instantly visible in the others. Only working files, index and HEAD are separate.</p></details>
+<details><summary>How do I delete a worktree?</summary><p><code>git worktree remove &lt;path&gt;</code>. If you deleted the folder manually, run <code>git worktree prune</code>.</p></details>
+</main><footer>Branchy by <a href="https://frusoft.dev">Frusoft</a> · <a href="/">Home</a> · <a href="/guides/">All guides</a></footer></body></html>

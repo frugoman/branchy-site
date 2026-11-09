@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0e1320"><link rel="icon" href="/icon.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800;900&family=Overpass+Mono:wght@400&display=swap" rel="stylesheet"><link rel="stylesheet" href="/guides/guide.css">
+<title>Git worktrees for parallel AI coding agents: setup and gotchas</title>
+<meta name="description" content="Run several AI coding agents (Claude Code, Codex, Cursor) on one repo without collisions. Worktree setup plus node_modules, .env, port and branch-lock gotchas.">
+<link rel="canonical" href="https://branchy.frusoft.dev/guides/git-worktree-ai-coding-agents/">
+<meta property="og:title" content="Git worktrees for parallel AI coding agents"><meta property="og:description" content="Setup and the gotchas: node_modules, .env, ports, the one-branch lock."><meta property="og:type" content="article"><meta property="og:url" content="https://branchy.frusoft.dev/guides/git-worktree-ai-coding-agents/"><meta property="og:image" content="https://branchy.frusoft.dev/icon.png"><meta name="twitter:card" content="summary">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Git worktrees for parallel AI coding agents: setup and gotchas","author":{"@type":"Organization","name":"Frusoft"},"publisher":{"@type":"Organization","name":"Frusoft","url":"https://frusoft.dev"},"mainEntityOfPage":"https://branchy.frusoft.dev/guides/git-worktree-ai-coding-agents/","datePublished":"2026-11-09"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Why does each AI coding agent need its own worktree?","acceptedAnswer":{"@type":"Answer","text":"Agents edit files and run builds. Two agents in one folder overwrite each other's edits and break each other's builds. Separate worktrees give each its own files, index and branch while sharing history."}},
+{"@type":"Question","name":"Why is my new worktree missing node_modules and .env?","acceptedAnswer":{"@type":"Answer","text":"Git only checks out tracked files. Ignored files such as node_modules and .env exist only in the folder where they were created, so each worktree needs its own install and a copy of local config."}},
+{"@type":"Question","name":"Can two worktrees run the same dev server?","acceptedAnswer":{"@type":"Answer","text":"Not on the same port. Give each worktree its own PORT, or let the tool pick a free one."}}]}</script>
+</head><body><header><a class="brand" href="/">Branchy</a><a href="/guides/">Guides</a><a href="/#install">Install</a></header><main>
+<p class="meta" style="margin-top:40px">Guide · Updated November 2026</p>
+<h1>Git worktrees for parallel AI coding agents: setup and gotchas</h1>
+<p class="lede">Running two coding agents in the same folder works until the first time one rewrites a file the other is halfway through, or one agent's <code>npm install</code> breaks the other's build. The fix is old and boring: give each agent its own git worktree.</p>
+
+<h2>Why a worktree, not a clone or a branch</h2>
+<ul>
+<li><b>A branch switch</b> changes the one working folder everyone shares. It can't isolate two agents.</li>
+<li><b>A full clone</b> isolates, but duplicates history, and agents' commits don't see each other until pushed and fetched.</li>
+<li><b>A worktree</b> gives each agent its own files, index and branch, while sharing one object database. Commits are visible everywhere immediately, and merging is ordinary git.</li>
+</ul>
+
+<h2>Setup in three commands</h2>
+<pre><code>git worktree add -b agent/search-filters ../app-agent-1 main
+git worktree add -b agent/fix-timezone  ../app-agent-2 main
+git worktree list</code></pre>
+<p>Start each agent with its working directory set to its own folder. Some tools now do this for you: Claude Code, for example, can create worktrees under <code>.claude/worktrees/</code> inside the repo (add that path to <code>.gitignore</code>). Whatever creates them, they're ordinary git worktrees and every command here applies.</p>
+
+<h2>Gotcha 1: ignored files don't exist in the new worktree</h2>
+<p>Git checks out tracked files only. A fresh worktree has no <code>node_modules</code>, no <code>.env</code>, no local config, no keystore, no generated plists. The agent's first build fails, or worse, succeeds with missing config and produces something subtly wrong. Fix it once with a setup script and run it on every new worktree:</p>
+<pre><code>#!/bin/sh
+# usage: setup-worktree.sh &lt;main-checkout&gt; (run inside the new worktree)
+main="$1"
+for f in .env .env.local; do
+  [ -f "$main/$f" ] &amp;&amp; cp "$main/$f" .
+done
+npm ci</code></pre>
+<p>Copy secrets rather than symlinking them if an agent might edit them. Always check the build output for what you assumed was included.</p>
+
+<h2>Gotcha 2: two dev servers, one port</h2>
+<p>Both agents start <code>npm run dev</code> and the second dies on <code>EADDRINUSE</code>, or worse, a browser tab shows the wrong worktree's app. Give each worktree an explicit port (<code>PORT=3001</code>, <code>3002</code>) in its local env file. The same applies to databases, emulators and anything else bound to a fixed local port.</p>
+
+<h2>Gotcha 3: the one-branch lock</h2>
+<p>Git won't let two worktrees hold the same branch. This protects you, and it's why each agent needs its own branch name. If an agent is told to "check out main" while main is checked out in your home folder, it'll fail. Have agents work on their own branches and merge into main from your home checkout.</p>
+
+<h2>Gotcha 4: cleanup debt</h2>
+<p>Agents leave worktrees behind. A week in you have a dozen folders, half with uncommitted changes nobody remembers. Build a habit: when a branch merges, <code>git worktree remove</code> its folder and delete the branch. <code>git worktree list</code> shows what's outstanding, and <code>git worktree prune</code> clears records for folders deleted by hand.</p>
+
+<h2>Gotcha 5: merging N branches back</h2>
+<p>Parallel agents touching the same files means conflicts later. Give each agent a clearly separate area, merge the smallest changes first, and rebase the rest onto the result before merging. Review each diff as a normal pull request. The worktree isolates the work, but it doesn't make it correct.</p>
+
+<div class="cta"><p><b>See every agent's worktree at a glance.</b> Branchy is a free macOS git client that lists all worktrees of a repo on one line, with uncommitted changes and ahead/behind per worktree. Review what each agent did, stage line by line, open the PR, and remove the worktree when it merges.</p><a class="btn" href="/#install">Get Branchy for Mac</a></div>
+
+<h2>FAQ</h2>
+<details><summary>Why does each AI coding agent need its own worktree?</summary><p>Agents edit files and run builds. In one folder they overwrite each other's edits and break each other's builds. Separate worktrees isolate files, index and branch while sharing history.</p></details>
+<details><summary>Why is my new worktree missing node_modules and .env?</summary><p>Git only checks out tracked files. Ignored files exist only where they were created, so each worktree needs its own install and a copy of local config.</p></details>
+<details><summary>Can two worktrees run the same dev server?</summary><p>Not on the same port. Give each worktree its own <code>PORT</code>.</p></details>
+<p>Related: <a href="/guides/git-worktree-multiple-branches/">Work on multiple branches at once with git worktree</a>.</p>
+</main><footer>Branchy by <a href="https://frusoft.dev">Frusoft</a> · <a href="/">Home</a> · <a href="/guides/">All guides</a></footer></body></html>
