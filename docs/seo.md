@@ -27,3 +27,9 @@ Not verified: search volumes. Check Search Console after indexing and pick the n
 - Guides have no app screenshots yet; add real Branchy worktree sidebar screenshot.
 - og:image is the 512px icon; a 1200x630 social card would be better.
 - "frugoman.github.io/branchy-site" in the app README is stale (site is branchy.frusoft.dev).
+
+## Analytics
+- GA4 `G-8YEB17G493`, `analytics.js` (unchanged copy of the playbook's `site-analytics.js`) included with `defer` on home, 404, guides index, both guides and `/privacy/`. Consent Mode v2 default denied, banner, DNT respected. No CSP on this site.
+- Layer 1: no store link (Mac app, DMG + Homebrew), so no `pt/ct` tokens. DMG download buttons and guide CTAs carry `data-cta="download"`; JSON-LD `downloadUrl` left untagged.
+- New `/privacy/` page (en) with the analytics paragraph; linked from home and guide footers; in sitemap.
+- Read data: GA4 events `cta_click`, `guide_read`.

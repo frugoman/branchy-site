@@ -8,6 +8,7 @@
 {"@type":"Question","name":"Why can't I check out the same branch in two worktrees?","acceptedAnswer":{"@type":"Answer","text":"Git refuses because two working copies moving the same branch pointer would silently overwrite each other's commits. Create a new branch from it, or use git worktree add --detach for a read-only look."}},
 {"@type":"Question","name":"Do worktrees share the same git history?","acceptedAnswer":{"@type":"Answer","text":"Yes. All worktrees share one .git object database, refs and config, so a commit made in one is instantly visible to the others. Only the working files, index and HEAD are separate."}},
 {"@type":"Question","name":"How do I delete a worktree?","acceptedAnswer":{"@type":"Answer","text":"Run git worktree remove <path>. If you deleted the folder by hand, run git worktree prune to clean up the stale record."}}]}</script>
+<script defer src="/analytics.js" data-mid="G-8YEB17G493"></script>
 </head><body><header><a class="brand" href="/">Branchy</a><a href="/guides/">Guides</a><a href="/#install">Install</a></header><main>
 <p class="meta" style="margin-top:40px">Guide · Updated November 2026</p>
 <h1>Work on multiple branches at once with git worktree (no stashing)</h1>
@@ -61,10 +62,10 @@ git worktree prune                        # drop records for folders you deleted
 git branch -d hotfix/x                    # the branch itself is separate</code></pre>
 <p>Removing a worktree doesn't delete its branch, and deleting a branch doesn't remove its worktree. Do both.</p>
 
-<div class="cta"><p><b>Seeing all of this at once.</b> The hard part of worktrees is remembering which folder holds what. Branchy is a free macOS git client that puts every worktree of a repo on one line in the sidebar, with uncommitted changes and ahead/behind counts, and switches between them in a click.</p><a class="btn" href="/#install">Get Branchy for Mac</a></div>
+<div class="cta"><p><b>Seeing all of this at once.</b> The hard part of worktrees is remembering which folder holds what. Branchy is a free macOS git client that puts every worktree of a repo on one line in the sidebar, with uncommitted changes and ahead/behind counts, and switches between them in a click.</p><a data-cta="download" class="btn" href="/#install">Get Branchy for Mac</a></div>
 
 <h2>FAQ</h2>
 <details><summary>Why can't I check out the same branch in two worktrees?</summary><p>Git refuses because two working copies moving the same branch pointer would silently overwrite each other's commits. Create a new branch from it, or use <code>--detach</code> for a read-only look.</p></details>
 <details><summary>Do worktrees share the same git history?</summary><p>Yes. One object database, refs and config are shared, so a commit in one worktree is instantly visible in the others. Only working files, index and HEAD are separate.</p></details>
 <details><summary>How do I delete a worktree?</summary><p><code>git worktree remove &lt;path&gt;</code>. If you deleted the folder manually, run <code>git worktree prune</code>.</p></details>
-</main><footer>Branchy by <a href="https://frusoft.dev">Frusoft</a> · <a href="/">Home</a> · <a href="/guides/">All guides</a></footer></body></html>
+</main><footer>Branchy by <a href="https://frusoft.dev">Frusoft</a> · <a href="/">Home</a> · <a href="/guides/">All guides</a> · <a href="/privacy/">Privacy</a></footer></body></html>
